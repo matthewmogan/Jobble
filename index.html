@@ -1,102 +1,1243 @@
-<!DOCTYPE html>
-<html lang="en-GB">    
-
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jobble </title>
-  <link rel="stylesheet" href="./resources/CSS/style.css">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-</head> 
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jobble</title>
+<meta name="description" content="Guess the country from how its people work. A daily geography game built on live World Bank labour data.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23BF3129'/%3E%3Cpath d='M38 14h8v24c0 8-5 13-13 13s-13-5-13-12h8c0 3 2 5 5 5s5-2 5-6z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.worldbank.org" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a clock-in time card. One narrow ruled card holds the evidence, guesses are logged
+   like punched rows underneath, and time-clock red is the only loud colour. */
+:root {
+  --paper: #E8EDE5;
+  --card: #F8FAF5;
+  --ink: #18202E;
+  --muted: #566172;
+  --rule: #CBD3C7;
+  --rule-strong: #9AA697;
+  --stamp: #BF3129;
+  --stamp-soft: rgba(191, 49, 41, .09);
+  --hit: #2C7A4B;
+  --hit-soft: rgba(44, 122, 75, .13);
+  --prox: rgba(24, 32, 46, .07);
+  --field: #FFFFFF;
+  --shadow: 0 1px 0 rgba(24, 32, 46, .05), 0 10px 28px -16px rgba(24, 32, 46, .35);
+  --backdrop: rgba(16, 21, 30, .45);
 
+  /* Sector tiles: lighter = women, darker = men. Mid-tones that read on either theme. */
+  --agr-w: #86B35C; --agr-m: #3E6B22;
+  --ind-w: #E6A640; --ind-m: #9C5C08;
+  --srv-w: #78A6DA; --srv-m: #24518A;
+  --tile-on-light: #10151F;
+  --tile-on-dark: #FFFFFF;
+
+  /* Status in employment bar */
+  --st-wage: #18202E; --st-emp: #566172; --st-own: #97A2AF; --st-fam: #CDD4DC;
+
+  --font-display: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0F141C; --card: #171E29; --ink: #E7EBF1; --muted: #98A3B3;
+    --rule: #29323F; --rule-strong: #3E4958; --stamp: #F0625A; --stamp-soft: rgba(240, 98, 90, .13);
+    --hit: #5CC287; --hit-soft: rgba(92, 194, 135, .15); --prox: rgba(231, 235, 241, .07);
+    --field: #10151D; --shadow: 0 1px 0 rgba(0, 0, 0, .35), 0 12px 32px -16px rgba(0, 0, 0, .8);
+    --backdrop: rgba(0, 0, 0, .6);
+    --st-wage: #E7EBF1; --st-emp: #A9B3C1; --st-own: #6A7688; --st-fam: #394456;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0F141C; --card: #171E29; --ink: #E7EBF1; --muted: #98A3B3;
+  --rule: #29323F; --rule-strong: #3E4958; --stamp: #F0625A; --stamp-soft: rgba(240, 98, 90, .13);
+  --hit: #5CC287; --hit-soft: rgba(92, 194, 135, .15); --prox: rgba(231, 235, 241, .07);
+  --field: #10151D; --shadow: 0 1px 0 rgba(0, 0, 0, .35), 0 12px 32px -16px rgba(0, 0, 0, .8);
+  --backdrop: rgba(0, 0, 0, .6);
+  --st-wage: #E7EBF1; --st-emp: #A9B3C1; --st-own: #6A7688; --st-fam: #394456;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: max(12px, env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-bottom, 0px));
+}
+[hidden] { display: none !important; }
+button, input { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* ---------- Masthead ---------- */
+.masthead {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+  padding-block: 8px 10px; border-bottom: 3px solid var(--ink);
+}
+.brand { min-width: 0; }
+.wordmark {
+  margin: 0; font: 900 clamp(46px, 13vw, 68px)/.82 var(--font-display);
+  text-transform: uppercase; letter-spacing: .005em;
+}
+.wordmark span { color: var(--stamp); }
+.tagline { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.35; }
+.head-tools { display: flex; gap: 8px; flex-shrink: 0; }
+.icon-btn {
+  width: 40px; height: 40px; display: grid; place-items: center; cursor: pointer;
+  background: var(--card); border: 1.5px solid var(--rule-strong); border-radius: 8px;
+}
+.icon-btn:hover { border-color: var(--ink); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+.modes { display: flex; gap: 0; border: 1.5px solid var(--ink); border-radius: 8px; overflow: hidden; align-self: flex-start; }
+.modes button {
+  border: 0; background: transparent; padding: 7px 16px; cursor: pointer;
+  font: 600 13px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .08em;
+}
+.modes button + button { border-left: 1.5px solid var(--ink); }
+.modes button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+
+/* ---------- Time card ---------- */
+.card {
+  position: relative; background: var(--card); border: 1px solid var(--rule); border-radius: 6px;
+  box-shadow: var(--shadow); padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 14px;
+}
+/* the punch-hole at the top of a time card */
+.card.timecard::before {
+  content: ""; position: absolute; top: -1px; left: 50%; width: 30px; height: 15px; transform: translateX(-50%);
+  background: var(--paper); border: 1px solid var(--rule); border-top: 0; border-radius: 0 0 15px 15px;
+}
+.card-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+  font: 600 12px/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+}
+.stamp {
+  display: inline-block; color: var(--stamp); border: 1.5px solid currentColor; border-radius: 3px;
+  padding: 4px 8px 3px; transform: rotate(-1.5deg); font: 600 12px/1.2 var(--font-mono);
+  text-transform: uppercase; letter-spacing: .1em;
+}
+
+.total { display: flex; flex-direction: column; gap: 4px; }
+.label {
+  font: 600 12px/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+}
+.big {
+  font: 800 clamp(42px, 12vw, 60px)/.92 var(--font-display); font-variant-numeric: tabular-nums;
+  letter-spacing: .005em;
+}
+.big .unit { font-weight: 700; font-size: .62em; }
+.sub { color: var(--muted); font-size: 14px; margin: 0; }
+
+.treemap {
+  position: relative; width: 100%; aspect-ratio: 16 / 10; max-width: 100%;
+  background: var(--card); border-radius: 4px; overflow: hidden;
+}
+@media (max-width: 480px) { .treemap { aspect-ratio: 1 / 1; } }
+.tile {
+  position: absolute; overflow: hidden; border-radius: 2px; padding: 6px 7px;
+  display: flex; flex-direction: column; gap: 2px; line-height: 1.15; font-size: 12px;
+}
+.tile.w { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 5px, transparent 5px 11px); }
+.t-name { font-weight: 700; white-space: nowrap; }
+.t-sex { font-weight: 500; opacity: .85; }
+.t-pct { font: 800 24px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.t-pct.sm { font-size: 15px; }
+.t-n { font: 500 11px/1.2 var(--font-mono); opacity: .85; }
+.treemap.loading { background: repeating-linear-gradient(135deg, var(--rule) 0 10px, var(--card) 10px 20px); opacity: .55; }
+.treemap .msg {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px;
+  color: var(--ink); font-weight: 600;
+}
+.treemap .msg span { background: var(--card); padding: 8px 12px; border-radius: 4px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.legend .key { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; }
+.legend .key b { font-weight: 500; color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+.sw { display: inline-flex; width: 18px; height: 12px; border-radius: 2px; overflow: hidden; }
+.sw i { flex: 1; }
+.legend .note { flex-basis: 100%; }
+
+/* ---------- Clues ---------- */
+.clues { list-style: none; margin: 0; padding: 0; border-top: 1px dashed var(--rule-strong); }
+.clue {
+  display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 4px 12px; align-items: baseline;
+  padding: 9px 0; border-bottom: 1px dashed var(--rule);
+}
+.clue:last-child { border-bottom: 0; }
+.clue .label { font-size: 11px; }
+.clue .val { font-weight: 600; min-width: 0; }
+.clue.locked .val { color: var(--muted); font-weight: 400; font-size: 14px; display: inline-flex; gap: 6px; align-items: center; }
+.clue.locked .val svg { width: 14px; height: 14px; flex-shrink: 0; }
+.clue.fresh { animation: flash 1.2s ease-out; }
+@keyframes flash { from { background: var(--stamp-soft); } to { background: transparent; } }
+@media (max-width: 420px) { .clue { grid-template-columns: minmax(0, 1fr); } }
+
+.statusbar { display: flex; height: 14px; border-radius: 2px; overflow: hidden; margin: 4px 0 6px; }
+.statusbar i { display: block; height: 100%; }
+.statuskey { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+.statuskey span { display: inline-flex; align-items: center; gap: 5px; }
+.statuskey i { width: 9px; height: 9px; border-radius: 1px; display: inline-block; }
+.statuskey b { color: var(--ink); font-family: var(--font-mono); font-weight: 600; }
+
+/* ---------- Guessing ---------- */
+.guess-form { display: flex; gap: 8px; }
+.combo { position: relative; flex: 1; min-width: 0; }
+.combo input {
+  width: 100%; height: 48px; padding: 0 14px; background: var(--field); color: var(--ink);
+  border: 1.5px solid var(--rule-strong); border-radius: 8px; font-size: 16px;
+}
+.combo input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px var(--stamp-soft); }
+.combo input::placeholder { color: var(--muted); }
+.combo ul {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px;
+  list-style: none; background: var(--card); border: 1.5px solid var(--ink); border-radius: 8px;
+  box-shadow: var(--shadow); max-height: 264px; overflow-y: auto;
+}
+.combo li { padding: 9px 10px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.combo li small { color: var(--muted); font-size: 12px; text-align: right; }
+.combo li[aria-selected="true"], .combo li:hover { background: var(--stamp-soft); }
+.btn {
+  height: 48px; padding: 0 18px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+  border: 1.5px solid var(--ink); background: var(--card); font-weight: 700;
+}
+.btn.primary { background: var(--ink); color: var(--card); }
+.btn.primary:hover { background: var(--stamp); border-color: var(--stamp); color: #fff; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+.log { padding: 0; overflow: hidden; gap: 0; }
+.log-head {
+  display: grid; grid-template-columns: 26px minmax(0, 1fr) 76px 30px 48px; gap: 6px; align-items: center;
+  padding: 10px 12px 8px; border-bottom: 1.5px solid var(--ink);
+  font: 600 11px/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+}
+.log-head .r, .guess .r { text-align: right; }
+.log-head .c, .guess .c { text-align: center; }
+.unit-toggle { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; text-transform: inherit; letter-spacing: inherit; }
+.guesses { list-style: none; margin: 0; padding: 0; }
+.guess {
+  position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr) 76px 30px 48px; gap: 6px;
+  align-items: center; min-height: 46px; padding: 0 12px; border-bottom: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+.guess:last-child { border-bottom: 0; }
+.guess > * { position: relative; }
+.guess .fill { position: absolute; inset: 0 auto 0 0; width: var(--p, 0%); background: var(--prox); }
+.guess .n { font: 600 12px var(--font-mono); color: var(--muted); }
+.guess .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guess .d, .guess .p { font: 500 14px var(--font-mono); }
+.guess .arrow { display: grid; place-items: center; }
+.guess .arrow svg { width: 22px; height: 22px; }
+.guess.empty .name { color: var(--muted); font-weight: 400; }
+.guess.empty .name::after { content: ""; display: block; border-bottom: 1px dotted var(--rule-strong); margin-right: 30%; }
+.guess.hit .fill { background: var(--hit-soft); }
+.guess.hit .arrow, .guess.hit .p { color: var(--hit); font-weight: 600; }
+.guess.new { animation: punch .45s ease-out; }
+@keyframes punch { from { background: var(--stamp-soft); } to { background: transparent; } }
+
+/* ---------- Result ---------- */
+.result { gap: 12px; }
+.result-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.result .stamp.huge {
+  font: 900 34px/1 var(--font-display); letter-spacing: .06em; border-width: 3px; padding: 6px 12px 4px;
+  transform: rotate(-3deg);
+}
+.result .stamp.huge.landed { animation: thunk .4s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes thunk { from { transform: rotate(-3deg) scale(1.6); opacity: 0; } to { transform: rotate(-3deg) scale(1); opacity: 1; } }
+.score { font: 800 30px/1 var(--font-display); }
+.answer { margin: 0; font-size: 18px; text-wrap: balance; }
+.answer strong { font: 800 26px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .01em; }
+.answer-meta { margin: 0; color: var(--muted); font-size: 14px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions .btn { flex: 1 1 160px; }
+.share-fallback { width: 100%; min-height: 120px; font: 13px/1.5 var(--font-mono); background: var(--field); border: 1px solid var(--rule-strong); border-radius: 6px; padding: 8px; color: var(--ink); }
+.morelink { font-size: 14px; font-weight: 600; text-underline-offset: 3px; }
+.next-daily { margin: 0; font-size: 14px; color: var(--muted); }
+
+.error-box { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.error-box p { margin: 0; }
+
+footer { font-size: 12.5px; color: var(--muted); line-height: 1.5; padding-top: 4px; }
+footer p { margin: 0 0 4px; }
+
+/* ---------- Dialogs ---------- */
+dialog {
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 0;
+  background: var(--card); color: var(--ink); border: 1.5px solid var(--ink); border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+dialog::backdrop { background: var(--backdrop); }
+.dlg-inner { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dlg-head h2 { margin: 0; font: 800 30px/1 var(--font-display); text-transform: uppercase; }
+dialog p, dialog li { font-size: 15px; line-height: 1.55; max-width: 62ch; }
+dialog p { margin: 0; }
+dialog ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.statgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.statgrid div { display: flex; flex-direction: column; gap: 2px; }
+.statgrid b { font: 800 34px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.statgrid span { font-size: 11px; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .05em; }
+.dist { display: flex; flex-direction: column; gap: 4px; }
+.dist-row { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; align-items: center; font: 600 13px var(--font-mono); }
+.dist-row .bar { background: var(--muted); color: var(--card); padding: 2px 6px; text-align: right; min-width: 22px; border-radius: 2px; }
+.dist-row .bar.today { background: var(--stamp); color: #fff; }
+.seg { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; cursor: pointer; font: 600 13px var(--font-mono); }
+.seg button + button { border-left: 1.5px solid var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.row-inline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 50;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--card); padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px;
+  max-width: calc(100vw - 32px); text-align: center; box-shadow: var(--shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
 <body>
-  <!-- structure this nav bar as an object-->
-  <nav class ="navbar">
-    <ul class="navlinks">
-      <li><a href="./index.html" target="_self"><span class="material-symbols-outlined">travel_explore</span></a></li>
-      <li><a href="./instructions.html" target ="_self"><span class="material-symbols-outlined">info</span></a></li>
-      <li><a href="./about.html" target="_self"><span class="material-symbols-outlined">overview</span></a></li>
-    </ul>
-  </nav>
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">
+      <h1 class="wordmark">Job<span>b</span>le</h1>
+      <p class="tagline">Guess the country from how its people work.</p>
+    </div>
+    <div class="head-tools">
+      <button class="icon-btn" id="helpBtn" type="button" aria-label="How to play">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.3-2.5 4"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg>
+      </button>
+      <button class="icon-btn" id="statsBtn" type="button" aria-label="Statistics and settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 20V12M12 20V5M19 20v-9"/></svg>
+      </button>
+    </div>
+  </header>
 
-  <!-- this is a grid that represents the gameboad. in the future, I'd like to 1) use a real grid system to build this more robustly, 2) have a different layout for mobile vs desktop, and 3) make it more fluid / dynamic -->
-
-  <div class="board">
-    
-    <!-- row - title -->
-    <h1 class="title"><Span id="game_title">Job</Span>ble</h1>
-    <h2 class="subtitle">Guess the country based on people's jobs!</h2>
-    
-    <!-- row - gameboard -->
-    <h3 class="job_chart">Placeholder for Job Chart</h3>
-    
-    <!-- row - guess interface  -->
-    <form class="guess_dropdown">
-      <!-- <label for="autocomplete-input">Country</label> -->
-      <input type="text" id="autocomplete-input" list="countries" placeholder="Choose a country...">        
-      <datalist id="countries">
-          <!-- eventually this should live in SQL
-          source: https://www.oecd-ilibrary.org/employment/oecd-labour-force-statistics-2022_dc0c92f0-en-->
-          <option value="Australia">
-          <option value="Austria">
-          <option value="Belgium">
-          <option value="Canada">
-          <option value="Chile">
-          <option value="Colombia">
-          <option value="Costa Rica">
-          <option value="Czech Republic">
-          <option value="Denmark">
-          <option value="Estonia">
-          <option value="Finland">
-          <option value="France">
-          <option value="Germany">
-          <option value="Greece">
-          <option value="Hungary">
-          <option value="Iceland">
-          <option value="Ireland">
-          <option value="Israel">
-          <option value="Italy">
-          <option value="Japan">
-          <option value="Korea">
-          <option value="Latvia">
-          <option value="Lithuania">
-          <option value="Luxembourg">
-          <option value="Mexico">
-          <option value="Netherlands">
-          <option value="New Zealand">
-          <option value="Norway">
-          <option value="Poland">
-          <option value="Portugal">
-          <option value="Slovak Republic">
-          <option value="Slovenia">
-          <option value="Spain">
-          <option value="Sweden">
-          <option value="Switzerland">
-          <option value="Türkiye">
-          <option value="United Kingdom">
-          <option value="United States">
-      </datalist>
-    </form>
-
-    <button class ="guessbtn button">Guess</button>
-
-    <!-- rows - guesses -->
-    <h3 class = "guess 1">Guess 1</h3>
-    <h3 class = "guess 2">Guess 2</h3>  
-    <h3 class = "guess 3">Guess 3</h3>
-    <h3 class = "guess 4">Guess 4</h3>
-    <h3 class = "guess 5">Guess 5</h3>
-
-    <!-- row - hint -->
-
-    <button class = "hintbtn button">Hint</button>
-    <h3 class = "hint"> Placeholder for Hint </h3>
-
+  <div class="modes" role="group" aria-label="Game mode">
+    <button type="button" data-mode="daily" aria-pressed="true">Daily</button>
+    <button type="button" data-mode="practice" aria-pressed="false">Practice</button>
   </div>
 
-  <!-- <footer>
-    <p>Matt Mogan - 2024</p>
-  </footer> -->
+  <main class="stack">
+    <section class="card timecard" id="card" aria-labelledby="totalLabel">
+      <div class="card-head">
+        <span class="stamp" id="stamp">Clocking in…</span>
+        <span id="refYear">World Bank · ILO estimates</span>
+      </div>
 
+      <div class="total">
+        <span class="label" id="totalLabel">Total jobs</span>
+        <div class="big" id="totalJobs">—</div>
+        <p class="sub" id="totalSub">Fetching the latest figures from the World Bank…</p>
+      </div>
+
+      <div class="treemap loading" id="treemap" role="img" aria-label="Loading jobs by sector"></div>
+
+      <div class="legend" id="legend" hidden></div>
+
+      <ol class="clues" id="clues" aria-label="Clues"></ol>
+
+      <div class="error-box" id="errorBox" hidden>
+        <p id="errorText">Couldn't reach the World Bank data service.</p>
+        <button class="btn" type="button" id="retryBtn">Try again</button>
+      </div>
+    </section>
+
+    <section class="card result" id="result" hidden aria-live="polite">
+      <div class="result-head">
+        <span class="stamp huge" id="resultStamp">Hired</span>
+        <span class="score" id="resultScore">3/6</span>
+      </div>
+      <p class="answer">It was <strong id="answerName">—</strong></p>
+      <p class="answer-meta" id="answerMeta"></p>
+      <div class="actions">
+        <button class="btn primary" type="button" id="shareBtn">Copy result</button>
+        <button class="btn" type="button" id="nextBtn">Play a practice round</button>
+      </div>
+      <textarea class="share-fallback" id="shareFallback" readonly hidden aria-label="Your result to copy"></textarea>
+      <a class="morelink" id="wbLink" href="https://data.worldbank.org/" target="_blank" rel="noopener">Explore the data on the World Bank site</a>
+      <p class="next-daily" id="nextDaily">Next daily Jobble in <span class="mono" id="countdown">--:--:--</span></p>
+    </section>
+
+    <form class="guess-form" id="guessForm" autocomplete="off" novalidate>
+      <div class="combo">
+        <label for="guessInput" class="sr-only">Guess a country</label>
+        <input id="guessInput" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
+               aria-controls="suggestions" placeholder="Type a country…" spellcheck="false" autocapitalize="off" disabled>
+        <ul id="suggestions" role="listbox" aria-label="Matching countries" hidden></ul>
+      </div>
+      <button class="btn primary" type="submit" id="guessBtn" disabled>Guess</button>
+    </form>
+
+    <section class="card log" aria-label="Your guesses">
+      <div class="log-head" aria-hidden="true">
+        <span>#</span><span>Guess</span>
+        <span class="r"><button type="button" class="unit-toggle" id="unitToggle" title="Switch units">km</button></span>
+        <span class="c">Dir</span><span class="r">Close</span>
+      </div>
+      <ol class="guesses" id="guesses"></ol>
+    </section>
+  </main>
+
+  <footer>
+    <p>Data: World Bank World Development Indicators (ILO modelled estimates), fetched live from api.worldbank.org. Licensed CC BY 4.0.</p>
+    <p>Total jobs = labour force × (1 − unemployment rate). Distances run capital to capital.</p>
+  </footer>
+</div>
+
+<dialog id="helpDlg" aria-labelledby="helpTitle">
+  <form method="dialog" class="dlg-inner">
+    <div class="dlg-head"><h2 id="helpTitle">How to play</h2><button class="icon-btn" value="close" aria-label="Close">✕</button></div>
+    <p>Every day Jobble picks a country and shows its workforce: how many people have jobs, and how those jobs split across agriculture, industry and services for women and men.</p>
+    <ul>
+      <li>You get six guesses.</li>
+      <li>After a wrong guess you see how far its capital is from the answer's capital, which way to head, and how close you are.</li>
+      <li>Each wrong guess also unlocks a clue: unemployment, how people work, region, income group, then the capital's first letter.</li>
+      <li>Industry covers manufacturing, mining, construction and utilities. Services covers everything from retail and transport to health, teaching and government.</li>
+      <li>A new country arrives at midnight. Practice mode gives you as many random countries as you like.</li>
+    </ul>
+    <p>Figures are the ILO's modelled estimates published in the World Bank's World Development Indicators, loaded live each time you play.</p>
+  </form>
+</dialog>
+
+<dialog id="statsDlg" aria-labelledby="statsTitle">
+  <form method="dialog" class="dlg-inner">
+    <div class="dlg-head"><h2 id="statsTitle">Your record</h2><button class="icon-btn" value="close" aria-label="Close">✕</button></div>
+    <div class="statgrid" id="statgrid"></div>
+    <div class="label">Guesses needed (daily games)</div>
+    <div class="dist" id="dist"></div>
+    <div class="row-inline">
+      <span class="label">Distances in</span>
+      <div class="seg" role="group" aria-label="Distance units">
+        <button type="button" data-unit="km">km</button>
+        <button type="button" data-unit="mi">miles</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ================= Config ================= */
+  const API = 'https://api.worldbank.org/v2';
+  const EPOCH = { y: 2026, m: 9, d: 27 };          // 27 Oct 2026 is Jobble No. 1
+  const MAX_GUESSES = 6;
+  const HALF_EARTH_KM = 20037;
+  const SEED = 20261027;
+  const IND = {
+    lf: 'SL.TLF.TOTL.IN', lfFem: 'SL.TLF.TOTL.FE.ZS',
+    ue: 'SL.UEM.TOTL.ZS', ueF: 'SL.UEM.TOTL.FE.ZS', ueM: 'SL.UEM.TOTL.MA.ZS',
+    agr: 'SL.AGR.EMPL.ZS', agrF: 'SL.AGR.EMPL.FE.ZS', agrM: 'SL.AGR.EMPL.MA.ZS',
+    ind: 'SL.IND.EMPL.ZS', indF: 'SL.IND.EMPL.FE.ZS', indM: 'SL.IND.EMPL.MA.ZS',
+    srv: 'SL.SRV.EMPL.ZS', srvF: 'SL.SRV.EMPL.FE.ZS', srvM: 'SL.SRV.EMPL.MA.ZS',
+    wage: 'SL.EMP.WORK.ZS', employer: 'SL.EMP.MPYR.ZS', self: 'SL.EMP.SELF.ZS', family: 'SL.FAM.WORK.ZS'
+  };
+  const CODE_TO_KEY = Object.fromEntries(Object.entries(IND).map(([k, v]) => [v, k]));
+  const SECTORS = {
+    srv: { name: 'Services', w: '--srv-w', m: '--srv-m' },
+    ind: { name: 'Industry', w: '--ind-w', m: '--ind-m' },
+    agr: { name: 'Agriculture', w: '--agr-w', m: '--agr-m' }
+  };
+
+  const NAME_FIX = {
+    'Bahamas, The': 'Bahamas', 'Congo, Dem. Rep.': 'DR Congo', 'Congo, Rep.': 'Republic of the Congo',
+    'Egypt, Arab Rep.': 'Egypt', 'Gambia, The': 'Gambia', 'Hong Kong SAR, China': 'Hong Kong',
+    'Iran, Islamic Rep.': 'Iran', "Korea, Dem. People's Rep.": 'North Korea', 'Korea, Rep.': 'South Korea',
+    'Lao PDR': 'Laos', 'Macao SAR, China': 'Macao', 'Micronesia, Fed. Sts.': 'Micronesia',
+    'Russian Federation': 'Russia', 'Syrian Arab Republic': 'Syria', 'Venezuela, RB': 'Venezuela',
+    'Yemen, Rep.': 'Yemen', 'Kyrgyz Republic': 'Kyrgyzstan', 'Slovak Republic': 'Slovakia',
+    'Turkiye': 'Türkiye', 'Viet Nam': 'Vietnam', 'Brunei Darussalam': 'Brunei', "Cote d'Ivoire": "Côte d'Ivoire",
+    'Curacao': 'Curaçao', 'Sao Tome and Principe': 'São Tomé and Príncipe', 'St. Lucia': 'Saint Lucia',
+    'St. Kitts and Nevis': 'Saint Kitts and Nevis', 'St. Vincent and the Grenadines': 'Saint Vincent and the Grenadines',
+    'St. Martin (French part)': 'Saint Martin', 'Sint Maarten (Dutch part)': 'Sint Maarten',
+    'Virgin Islands (U.S.)': 'US Virgin Islands', 'West Bank and Gaza': 'Palestine', 'Somalia, Fed. Rep.': 'Somalia',
+    'Venezuela, Bolivarian Republic of': 'Venezuela'
+  };
+  const ALIASES = {
+    USA: ['usa', 'us', 'america', 'united states of america'], GBR: ['uk', 'britain', 'great britain', 'england', 'scotland', 'wales'],
+    ARE: ['uae', 'emirates'], CZE: ['czech republic'], CIV: ['ivory coast'], CPV: ['cape verde'], SWZ: ['swaziland'],
+    MMR: ['burma'], TUR: ['turkey', 'turkiye'], COD: ['drc', 'congo kinshasa', 'democratic republic of the congo', 'zaire'],
+    COG: ['congo brazzaville'], PRK: ['dprk'], KOR: ['korea'], NLD: ['holland'], MKD: ['macedonia'], TLS: ['east timor'],
+    PSE: ['west bank', 'gaza'], VNM: ['viet nam'], LAO: ['lao pdr'], RUS: ['russian federation'], BRN: ['brunei darussalam'],
+    KGZ: ['kyrgyz republic'], SVK: ['slovak republic'], VAT: ['vatican'], FSM: ['micronesia']
+  };
+
+  /* ================= Helpers ================= */
+  const $ = (s) => document.querySelector(s);
+  const store = {
+    get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } }
+  };
+  const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const cssVar = (v) => `var(${v})`;
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const compact = new Intl.NumberFormat('en-GB', { notation: 'compact', maximumSignificantDigits: 3 });
+
+  function bigNumber(n) {
+    if (n >= 1e9) return { num: (n / 1e9).toPrecision(3), unit: 'billion' };
+    if (n >= 1e6) return { num: (n / 1e6).toPrecision(3), unit: 'million' };
+    return { num: (Math.round(n / 1000) * 1000).toLocaleString('en-GB'), unit: '' };
+  }
+  const pct = (x, d = 1) => (x < 0.05 && x > 0 ? '<0.1' : x.toFixed(d)) + '%';
+
+  function dayNumber(date = new Date()) {
+    const a = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    const b = Date.UTC(EPOCH.y, EPOCH.m, EPOCH.d);
+    return Math.round((a - b) / 86400000);
+  }
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffled(list, seed) {
+    const rnd = mulberry32(seed); const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  function haversine(a, b) {
+    const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
+    return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(s)));
+  }
+  function bearing(a, b) {
+    const r = Math.PI / 180, dLon = (b.lon - a.lon) * r;
+    const y = Math.sin(dLon) * Math.cos(b.lat * r);
+    const x = Math.cos(a.lat * r) * Math.sin(b.lat * r) - Math.sin(a.lat * r) * Math.cos(b.lat * r) * Math.cos(dLon);
+    return (Math.atan2(y, x) / r + 360) % 360;
+  }
+  const COMPASS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+  const ARROWS = ['⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️'];
+  const octant = (b) => Math.round(b / 45) % 8;
+
+  /* ================= World Bank API ================= */
+  class ApiError extends Error {}
+  class SlowError extends Error {}
+  const TIMEOUT_MS = 60000;            // the API is sometimes very slow on a cold query
+
+  async function getJSON(url) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { signal: ctl.signal });
+      if (!res.ok) throw new ApiError('HTTP ' + res.status);
+      return await res.json();
+    } catch (err) {
+      if (err && err.name === 'AbortError') throw new SlowError('timed out');
+      throw err;
+    } finally { clearTimeout(timer); }
+  }
+  // The API answers [meta, rows] on success and [{message:[...]}] on a bad request.
+  function wbRows(json) {
+    if (!Array.isArray(json) || !json.length) throw new ApiError('Unexpected response from the World Bank API');
+    if (json[0] && json[0].message) {
+      const m = json[0].message[0] || {};
+      throw new ApiError(m.value || m.key || 'World Bank API error');
+    }
+    return Array.isArray(json[1]) ? json[1] : [];
+  }
+  function cached(key, ttlMs) {
+    const hit = store.get(key);
+    return hit && Date.now() - hit.t < ttlMs ? hit.v : undefined;
+  }
+  const remember = (key, v) => store.set(key, { t: Date.now(), v });
+
+  async function loadCountries() {
+    const key = 'jobble:countries:v1';
+    const hit = cached(key, 7 * 864e5);
+    if (hit) return hit;
+    const rows = wbRows(await getJSON(`${API}/country?format=json&per_page=500`));
+    const list = rows
+      .filter((r) => r.region && r.region.id !== 'NA' && (r.region.value || '').trim() !== 'Aggregates')
+      .map((r) => ({
+        iso3: r.id, iso2: r.iso2Code, wbName: r.name, name: NAME_FIX[r.name] || r.name,
+        region: (r.region.value || '').trim(), income: ((r.incomeLevel && r.incomeLevel.value) || '').trim(),
+        capital: (r.capitalCity || '').trim(), lat: parseFloat(r.latitude), lon: parseFloat(r.longitude)
+      }))
+      .filter((c) => c.iso3 && c.iso3.length === 3 && Number.isFinite(c.lat) && Number.isFinite(c.lon) && c.capital);
+    if (list.length < 50) throw new ApiError('The World Bank country list came back incomplete');
+    remember(key, list);
+    return list;
+  }
+
+  // The answer pool: the 181 economies with ILO modelled labour data in the World Bank API (checked Oct 2026).
+  // Built in rather than fetched, because the API takes 20+ seconds to answer an all-countries query.
+  const ELIGIBLE = ('AFG,AGO,ALB,ARE,ARG,ARM,AUS,AUT,AZE,BDI,BEL,BEN,BFA,BGD,BGR,BHR,BHS,BIH,BLR,BLZ,BOL,BRA,BRB,BRN,BTN,BWA,CAF,CAN,'
+    + 'CHE,CHL,CHN,CIV,CMR,COD,COG,COL,COM,CPV,CRI,CUB,CYP,CZE,DEU,DJI,DNK,DOM,DZA,ECU,EGY,ERI,ESP,EST,ETH,FIN,FJI,FRA,GAB,GBR,GEO,'
+    + 'GHA,GIN,GMB,GNB,GNQ,GRC,GTM,GUM,GUY,HND,HRV,HTI,HUN,IDN,IND,IRL,IRN,IRQ,ISL,ITA,JAM,JOR,JPN,KAZ,KEN,KGZ,KHM,KOR,KWT,LAO,LBN,'
+    + 'LBR,LBY,LCA,LKA,LSO,LTU,LUX,LVA,MAR,MDA,MDG,MDV,MEX,MKD,MLI,MLT,MMR,MNE,MNG,MOZ,MRT,MUS,MWI,MYS,NAM,NCL,NER,NGA,NIC,NLD,NOR,'
+    + 'NPL,NZL,OMN,PAK,PAN,PER,PHL,PNG,POL,PRI,PRK,PRT,PRY,PYF,QAT,ROU,RUS,RWA,SAU,SDN,SEN,SGP,SLB,SLE,SLV,SOM,SRB,SSD,STP,SUR,SVK,'
+    + 'SVN,SWE,SWZ,SYR,TCD,TGO,THA,TJK,TKM,TLS,TON,TTO,TUN,TUR,TZA,UGA,URY,USA,UZB,VCT,VEN,VIR,VNM,VUT,WSM,YEM,ZAF,ZMB,ZWE').split(',');
+
+  async function fetchIndicators(iso3) {
+    const codes = Object.values(IND);
+    const base = `${API}/country/${iso3}/indicator/`;
+    const qs = `?format=json&date=2010:${new Date().getFullYear()}&per_page=1000`;
+    let rows;
+    try {
+      rows = wbRows(await getJSON(base + codes.join(';') + qs + '&source=2'));
+    } catch (err) {
+      if (!(err instanceof ApiError)) throw err;               // network trouble: let the caller show it
+      // A bad or retired code fails the whole combined request, so fall back to one call per indicator.
+      const settled = await Promise.allSettled(codes.map((c) => getJSON(base + c + qs).then(wbRows)));
+      if (settled.every((s) => s.status === 'rejected')) throw settled[0].reason;
+      rows = settled.flatMap((s) => (s.status === 'fulfilled' ? s.value : []));
+    }
+    const latest = {};
+    for (const r of rows) {
+      const k = r.indicator && CODE_TO_KEY[r.indicator.id];
+      if (!k || r.value == null) continue;
+      const yr = parseInt(r.date, 10);
+      if (!latest[k] || yr > latest[k].year) latest[k] = { value: Number(r.value), year: yr };
+    }
+    return latest;
+  }
+
+  function buildProfile(v) {
+    const g = (k) => (v[k] ? v[k].value : null);
+    const lf = g('lf'), ue = g('ue');
+    if (!(lf > 0) || ue == null || ['agr', 'ind', 'srv'].some((s) => g(s) == null)) return null;
+    const haveSex = ['lfFem', 'ueF', 'ueM', 'agrF', 'agrM', 'indF', 'indM', 'srvF', 'srvM'].every((k) => g(k) != null);
+    const sectors = {};
+    let total, womenShare = null;
+    if (haveSex) {
+      const empW = lf * (g('lfFem') / 100) * (1 - g('ueF') / 100);
+      const empM = lf * (1 - g('lfFem') / 100) * (1 - g('ueM') / 100);
+      total = empW + empM;
+      womenShare = empW / total;
+      for (const s of ['agr', 'ind', 'srv']) {
+        const w = empW * g(s + 'F') / 100, m = empM * g(s + 'M') / 100;
+        sectors[s] = { total: w + m, parts: [{ sex: 'w', value: w }, { sex: 'm', value: m }] };
+      }
+    } else {
+      total = lf * (1 - ue / 100);
+      for (const s of ['agr', 'ind', 'srv']) {
+        const t = total * g(s) / 100;
+        sectors[s] = { total: t, parts: [{ sex: 'all', value: t }] };
+      }
+    }
+    const sum = Object.values(sectors).reduce((a, s) => a + s.total, 0);
+    // Self-employed = employers + own-account workers + contributing family workers.
+    const status = ['wage', 'employer', 'self', 'family'].every((k) => g(k) != null)
+      ? { wage: g('wage'), employer: g('employer'), own: Math.max(0, g('self') - g('employer') - g('family')), family: g('family') } : null;
+    return { total, lf, ue, year: v.lf.year, sectors, sum, womenShare, status };
+  }
+
+  async function loadProfile(iso3) {
+    const key = 'jobble:profile:v2:' + iso3;
+    const hit = cached(key, 864e5);
+    if (hit !== undefined) return hit;
+    const profile = buildProfile(await fetchIndicators(iso3));
+    remember(key, profile);
+    return profile;
+  }
+
+  /* ================= State ================= */
+  let countries = [], byIso = new Map(), eligible = [];
+  let mode = 'daily';
+  let game = null;        // { mode, day, target, guesses[], status }
+  let profile = null;
+  let unit = store.get('jobble:unit', 'km') === 'mi' ? 'mi' : 'km';
+  let loadToken = 0;
+
+  const els = {
+    stamp: $('#stamp'), refYear: $('#refYear'), totalJobs: $('#totalJobs'), totalSub: $('#totalSub'),
+    treemap: $('#treemap'), legend: $('#legend'), clues: $('#clues'), errorBox: $('#errorBox'), errorText: $('#errorText'),
+    result: $('#result'), resultStamp: $('#resultStamp'), resultScore: $('#resultScore'), answerName: $('#answerName'),
+    answerMeta: $('#answerMeta'), shareBtn: $('#shareBtn'), nextBtn: $('#nextBtn'), wbLink: $('#wbLink'),
+    nextDaily: $('#nextDaily'), countdown: $('#countdown'), shareFallback: $('#shareFallback'),
+    form: $('#guessForm'), input: $('#guessInput'), list: $('#suggestions'), guessBtn: $('#guessBtn'),
+    guesses: $('#guesses'), unitToggle: $('#unitToggle'), toast: $('#toast')
+  };
+
+  function dailyTargetOrder(day) {
+    const n = eligible.length;
+    const cycle = Math.floor(day / n);
+    const order = shuffled(eligible, SEED + cycle);
+    const idx = ((day % n) + n) % n;
+    return order.slice(idx).concat(order.slice(0, idx));
+  }
+
+  async function pickFrom(order) {
+    for (const iso of order.slice(0, 8)) {
+      const p = await loadProfile(iso);          // network errors propagate; missing data skips ahead
+      if (p) return { target: iso, profile: p };
+    }
+    throw new ApiError('No country had complete data. Try again later.');
+  }
+
+  function saveGame() {
+    if (!game) return;
+    const key = game.mode === 'daily' ? 'jobble:daily:' + game.day : 'jobble:practice';
+    store.set(key, { target: game.target, guesses: game.guesses, status: game.status, day: game.day });
+  }
+
+  // While someone plays, quietly load the next practice country so "New country" opens instantly.
+  let nextPractice = null, prefetching = false;
+  async function prefetchPractice() {
+    if (nextPractice || prefetching || !eligible.length) return;
+    prefetching = true;
+    const todays = store.get('jobble:daily:' + dayNumber());
+    const pool = eligible.filter((c) => (!todays || c !== todays.target) && (!game || c !== game.target));
+    try { nextPractice = await pickFrom(shuffled(pool, (Math.random() * 2 ** 31) | 0)); }
+    catch { /* try again after the next game loads */ }
+    finally { prefetching = false; }
+  }
+
+  async function startGame(newMode, { fresh = false } = {}) {
+    mode = newMode;
+    document.querySelectorAll('.modes button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    const token = ++loadToken;
+    showLoading();
+    const slowTimer = setTimeout(() => {
+      if (token === loadToken) els.totalSub.textContent = "The World Bank's servers are slow at the moment. Still waiting…";
+    }, 6000);
+    try {
+      if (!countries.length) {
+        countries = await loadCountries();
+        byIso = new Map(countries.map((c) => [c.iso3, c]));
+        eligible = ELIGIBLE.filter((iso) => byIso.has(iso));
+        buildSearchIndex();
+      }
+      let picked, saved;
+      const day = dayNumber();
+      if (mode === 'daily') {
+        saved = store.get('jobble:daily:' + day);
+        if (saved && byIso.has(saved.target)) picked = { target: saved.target, profile: await loadProfile(saved.target) };
+        if (!picked || !picked.profile) { saved = null; picked = await pickFrom(dailyTargetOrder(day)); }
+      } else {
+        saved = fresh ? null : store.get('jobble:practice');
+        if (saved && saved.status === 'playing' && byIso.has(saved.target)) {
+          picked = { target: saved.target, profile: await loadProfile(saved.target) };
+        }
+        if (!picked || !picked.profile) {
+          saved = null;
+          if (nextPractice) {
+            picked = nextPractice;
+          } else {
+            const todays = store.get('jobble:daily:' + day);
+            const pool = eligible.filter((c) => (!todays || c !== todays.target) && (!game || c !== game.target));
+            picked = await pickFrom(shuffled(pool, (Math.random() * 2 ** 31) | 0));
+          }
+          nextPractice = null;
+        }
+      }
+      if (token !== loadToken) return;
+      profile = picked.profile;
+      game = {
+        mode, day, target: picked.target,
+        guesses: saved ? saved.guesses.filter((g) => byIso.has(g)) : [],
+        status: saved ? saved.status : 'playing'
+      };
+      saveGame();
+      renderAll();
+      setTimeout(prefetchPractice, 1500);
+    } catch (err) {
+      if (token !== loadToken) return;
+      showError(err);
+    } finally {
+      clearTimeout(slowTimer);
+    }
+  }
+
+  /* ================= Rendering ================= */
+  function showLoading() {
+    els.errorBox.hidden = true;
+    els.result.hidden = true;
+    els.legend.hidden = true;
+    els.stamp.textContent = 'Clocking in…';
+    els.totalJobs.textContent = '—';
+    els.totalSub.textContent = 'Fetching the latest figures from the World Bank…';
+    els.treemap.className = 'treemap loading';
+    els.treemap.innerHTML = '';
+    els.treemap.setAttribute('aria-label', 'Loading jobs by sector');
+    els.clues.innerHTML = '';
+    setInputEnabled(false);
+    renderGuesses();
+  }
+
+  function showError(err) {
+    console.error(err);
+    els.treemap.className = 'treemap loading';
+    els.treemap.innerHTML = '';
+    els.stamp.textContent = 'Off the clock';
+    els.totalSub.textContent = '';
+    els.errorText.textContent = err instanceof SlowError
+      ? "The World Bank data service didn't answer within a minute. It's sometimes slow, so try again."
+      : err instanceof ApiError
+        ? `The World Bank data service returned an error (${err.message}). Try again in a moment.`
+        : "Couldn't reach the World Bank data service. Check your connection. If you opened Jobble in an app's preview pane, open the file in your web browser instead, since previews block outside data.";
+    els.errorBox.hidden = false;
+  }
+
+  function renderAll() {
+    els.errorBox.hidden = true;
+    els.stamp.textContent = game.mode === 'daily'
+      ? `Daily No. ${game.day + 1} · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+      : 'Practice round';
+    els.refYear.textContent = `ILO estimate · ${profile.year}`;
+    const b = bigNumber(profile.total);
+    els.totalJobs.innerHTML = `${escapeHtml(b.num)}${b.unit ? `<span class="unit"> ${b.unit}</span>` : ''}`;
+    els.totalSub.textContent = `people in work, out of a labour force of ${compact.format(profile.lf)}.`;
+    renderLegend();
+    renderTreemap();
+    renderClues(false);
+    renderGuesses();
+    renderResult(false);
+    setInputEnabled(game.status === 'playing');
+    els.form.hidden = game.status !== 'playing';
+  }
+
+  function renderLegend() {
+    const s = profile.sectors, sum = profile.sum;
+    const keys = ['agr', 'ind', 'srv'].map((k) => {
+      const meta = SECTORS[k];
+      return `<span class="key"><span class="sw" aria-hidden="true"><i style="background:${cssVar(meta.w)}"></i><i style="background:${cssVar(meta.m)}"></i></span>${meta.name} <b>${pct(s[k].total / sum * 100)}</b></span>`;
+    }).join('');
+    const note = profile.womenShare != null
+      ? `<span class="note">Striped, lighter tiles are jobs held by women (${pct(profile.womenShare * 100, 0)} of all jobs); solid, darker tiles are men's.</span>`
+      : `<span class="note">A split by sex isn't published for this country.</span>`;
+    els.legend.innerHTML = keys + note;
+    els.legend.hidden = false;
+  }
+
+  function squarify(items, x, y, w, h) {
+    const total = items.reduce((a, i) => a + i.value, 0);
+    if (!total || w <= 0 || h <= 0) return [];
+    const scale = (w * h) / total;
+    const nodes = items.map((i) => ({ ...i, area: i.value * scale })).sort((a, b) => b.area - a.area);
+    const out = [];
+    let rect = { x, y, w, h }, row = [];
+    const worst = (r, side) => {
+      const s = r.reduce((a, n) => a + n.area, 0);
+      let mx = 0, mn = Infinity;
+      for (const n of r) { mx = Math.max(mx, n.area); mn = Math.min(mn, n.area); }
+      return Math.max((side * side * mx) / (s * s), (s * s) / (side * side * mn));
+    };
+    const layout = (r) => {
+      const s = r.reduce((a, n) => a + n.area, 0);
+      if (rect.w >= rect.h) {
+        const cw = s / rect.h; let yy = rect.y;
+        for (const n of r) { const hh = n.area / cw; out.push({ ...n, x: rect.x, y: yy, w: cw, h: hh }); yy += hh; }
+        rect = { x: rect.x + cw, y: rect.y, w: rect.w - cw, h: rect.h };
+      } else {
+        const rh = s / rect.w; let xx = rect.x;
+        for (const n of r) { const ww = n.area / rh; out.push({ ...n, x: xx, y: rect.y, w: ww, h: rh }); xx += ww; }
+        rect = { x: rect.x, y: rect.y + rh, w: rect.w, h: rect.h - rh };
+      }
+    };
+    let i = 0;
+    while (i < nodes.length) {
+      const side = Math.min(rect.w, rect.h);
+      if (!row.length || worst(row.concat(nodes[i]), side) <= worst(row, side)) { row.push(nodes[i]); i++; }
+      else { layout(row); row = []; }
+    }
+    if (row.length) layout(row);
+    return out;
+  }
+
+  function renderTreemap() {
+    if (!profile) return;
+    const el = els.treemap;
+    el.className = 'treemap';
+    const W = el.clientWidth, H = el.clientHeight;
+    if (!W || !H) return;
+    const sum = profile.sum;
+    const sectorRects = squarify(
+      Object.entries(profile.sectors).filter(([, s]) => s.total > 0).map(([k, s]) => ({ key: k, value: s.total, parts: s.parts })),
+      0, 0, W, H
+    );
+    const GAP = 1.5;
+    let html = '';
+    const desc = [];
+    for (const r of sectorRects) {
+      const meta = SECTORS[r.key];
+      const parts = r.parts.filter((p) => p.value > 0);
+      const psum = parts.reduce((a, p) => a + p.value, 0);
+      let off = 0;
+      for (const p of parts) {
+        const f = p.value / psum;
+        const horiz = r.w >= r.h;
+        const x = horiz ? r.x + off * r.w : r.x, y = horiz ? r.y : r.y + off * r.h;
+        const w = horiz ? f * r.w : r.w, h = horiz ? r.h : f * r.h;
+        off += f;
+        const share = (p.value / sum) * 100;
+        const isW = p.sex === 'w';
+        const bg = p.sex === 'm' || p.sex === 'all' ? meta.m : meta.w;
+        const fg = isW ? '--tile-on-light' : '--tile-on-dark';
+        const sexLabel = p.sex === 'w' ? 'women' : p.sex === 'm' ? 'men' : 'all workers';
+        const title = `${meta.name}, ${sexLabel}: ${pct(share)} of jobs (${compact.format(p.value)})`;
+        desc.push(title);
+        const tw = w - GAP * 2, th = h - GAP * 2;
+        let inner = '';
+        if (tw >= 104 && th >= 66) {
+          inner = `<span class="t-name">${meta.name} <span class="t-sex">${sexLabel}</span></span><span class="t-pct">${pct(share)}</span><span class="t-n">${compact.format(p.value)} jobs</span>`;
+        } else if (tw >= 70 && th >= 58) {
+          inner = `<span class="t-name">${meta.name}</span>${p.sex === 'all' ? '' : `<span class="t-sex">${sexLabel}</span>`}<span class="t-pct sm">${pct(share)}</span>`;
+        } else if (tw >= 70 && th >= 40) {
+          inner = `<span class="t-name">${meta.name}</span><span class="t-pct sm">${pct(share)}</span>`;
+        } else if (tw >= 40 && th >= 22) {
+          inner = `<span class="t-pct sm">${pct(share, share < 10 ? 1 : 0)}</span>`;
+        }
+        html += `<div class="tile ${isW ? 'w' : ''}" title="${escapeHtml(title)}" style="left:${(x + GAP).toFixed(1)}px;top:${(y + GAP).toFixed(1)}px;width:${Math.max(0, tw).toFixed(1)}px;height:${Math.max(0, th).toFixed(1)}px;background-color:${cssVar(bg)};color:${cssVar(fg)}">${inner}</div>`;
+      }
+    }
+    el.innerHTML = html;
+    el.setAttribute('aria-label', 'Jobs by sector and sex. ' + desc.join('. '));
+  }
+
+  const CLUES = [
+    { label: 'Unemployment', show: (p) => `${pct(p.ue)} of the labour force` },
+    {
+      label: 'How people work',
+      show: (p) => {
+        if (!p.status) return 'Not published for this country';
+        const st = p.status, tot = st.wage + st.employer + st.own + st.family || 1;
+        const segs = [
+          ['Employees', st.wage, '--st-wage'], ['Employers', st.employer, '--st-emp'],
+          ['Own-account', st.own, '--st-own'], ['Family workers', st.family, '--st-fam']
+        ];
+        return `<div class="statusbar" aria-hidden="true">${segs.map(([, v, c]) => `<i style="width:${(v / tot * 100).toFixed(2)}%;background:${cssVar(c)}"></i>`).join('')}</div>`
+          + `<div class="statuskey">${segs.map(([n, v, c]) => `<span><i style="background:${cssVar(c)}"></i>${n} <b>${pct(v, v < 10 ? 1 : 0)}</b></span>`).join('')}</div>`;
+      }
+    },
+    { label: 'Region', show: (p, c) => escapeHtml(c.region || 'Unknown') },
+    { label: 'Income group', show: (p, c) => escapeHtml(c.income || 'Not classified') },
+    { label: 'Capital city', show: (p, c, done) => done ? escapeHtml(c.capital) : `Starts with “${escapeHtml(c.capital.charAt(0))}”` }
+  ];
+  const LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+  function wrongCount() { return game.guesses.filter((g) => g !== game.target).length; }
+
+  function renderClues(animateNewest) {
+    const done = game.status !== 'playing';
+    const wrong = wrongCount();
+    const c = byIso.get(game.target);
+    els.clues.innerHTML = CLUES.map((clue, i) => {
+      const open = done || wrong > i;
+      const fresh = animateNewest && !done && wrong === i + 1;
+      return `<li class="clue ${open ? '' : 'locked'} ${fresh ? 'fresh' : ''}"><span class="label">${clue.label}</span><div class="val">${
+        open ? clue.show(profile, c, done) : `${LOCK}<span>Unlocks after wrong guess ${i + 1}</span>`}</div></li>`;
+    }).join('');
+  }
+
+  function guessInfo(iso) {
+    const g = byIso.get(iso), t = byIso.get(game.target);
+    if (iso === game.target) return { g, hit: true, d: 0, b: 0, p: 100 };
+    const d = haversine(g, t);
+    return { g, hit: false, d, b: bearing(g, t), p: Math.min(99, Math.max(0, Math.floor((1 - d / HALF_EARTH_KM) * 100))) };
+  }
+  const fmtDist = (km) => unit === 'mi'
+    ? `${Math.round(km * 0.621371).toLocaleString('en-GB')} mi`
+    : `${Math.round(km).toLocaleString('en-GB')} km`;
+
+  function renderGuesses(newIndex = -1) {
+    els.unitToggle.textContent = unit === 'mi' ? 'Miles' : 'km';
+    const rows = [];
+    const guesses = game ? game.guesses : [];
+    for (let i = 0; i < MAX_GUESSES; i++) {
+      const iso = guesses[i];
+      if (!iso) {
+        rows.push(`<li class="guess empty"><span class="n">${i + 1}</span><span class="name"></span><span></span><span></span><span></span></li>`);
+        continue;
+      }
+      const info = guessInfo(iso);
+      const arrow = info.hit
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-label="Correct"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+        : `<svg viewBox="0 0 24 24" style="transform:rotate(${info.b.toFixed(0)}deg)" role="img" aria-label="Head ${COMPASS[octant(info.b)]}"><path d="M12 2.5l6.5 8.5h-4.2v10.5H9.7V11H5.5z" fill="currentColor"/></svg>`;
+      rows.push(`<li class="guess ${info.hit ? 'hit' : ''} ${i === newIndex ? 'new' : ''}" style="--p:${info.p}%">
+        <span class="fill" aria-hidden="true"></span>
+        <span class="n">${i + 1}</span>
+        <span class="name">${escapeHtml(info.g.name)}</span>
+        <span class="d r">${info.hit ? '—' : fmtDist(info.d)}</span>
+        <span class="arrow c">${arrow}</span>
+        <span class="p r">${info.p}%</span></li>`);
+    }
+    els.guesses.innerHTML = rows.join('');
+  }
+
+  function shareText() {
+    const lines = game.guesses.map((iso) => {
+      const info = guessInfo(iso);
+      if (info.hit) return '🟩🟩🟩🟩🟩🎉';
+      const full = Math.floor(info.p / 20), half = info.p - full * 20 >= 10 ? 1 : 0;
+      return '🟩'.repeat(full) + '🟨'.repeat(half) + '⬜'.repeat(5 - full - half) + ARROWS[octant(info.b)];
+    });
+    const score = game.status === 'won' ? `${game.guesses.length}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
+    const head = game.mode === 'daily' ? `#Jobble No. ${game.day + 1} ${score}` : `#Jobble practice ${score}`;
+    const url = /^https?:/.test(location.protocol) ? '\n' + location.origin + location.pathname : '';
+    return `${head}\n${lines.join('\n')}${url}`;
+  }
+
+  let countdownTimer = null;
+  function renderResult(justFinished) {
+    clearInterval(countdownTimer);
+    if (game.status === 'playing') { els.result.hidden = true; return; }
+    const c = byIso.get(game.target);
+    const won = game.status === 'won';
+    els.resultStamp.textContent = won ? 'Hired' : 'Shift over';
+    els.resultStamp.classList.toggle('landed', justFinished);
+    els.resultScore.textContent = won ? `${game.guesses.length}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
+    els.answerName.textContent = c.name;
+    els.answerMeta.textContent = [c.capital && `Capital ${c.capital}`, c.region, c.income].filter(Boolean).join(' · ');
+    els.wbLink.href = `https://data.worldbank.org/country/${encodeURIComponent((c.iso2 || c.iso3).toLowerCase())}`;
+    els.wbLink.textContent = `Explore ${c.name}'s data on the World Bank site`;
+    els.nextBtn.textContent = game.mode === 'daily' ? 'Play a practice round' : 'New country';
+    els.shareFallback.hidden = true;
+    els.result.hidden = false;
+    if (game.mode === 'daily') {
+      els.nextDaily.hidden = false;
+      const tick = () => {
+        const now = new Date();
+        const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const s = Math.max(0, Math.floor((next - now) / 1000));
+        els.countdown.textContent = [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':');
+        if (dayNumber() !== game.day) { clearInterval(countdownTimer); startGame('daily'); }
+      };
+      tick();
+      countdownTimer = setInterval(tick, 1000);
+    } else {
+      els.nextDaily.hidden = true;
+    }
+  }
+
+  function setInputEnabled(on) {
+    els.input.disabled = !on;
+    els.guessBtn.disabled = !on;
+    if (!on) closeList();
+  }
+
+  /* ================= Stats ================= */
+  function getStats() {
+    return Object.assign({ played: 0, won: 0, streak: 0, maxStreak: 0, dist: [0, 0, 0, 0, 0, 0], lastWinDay: null, lastDay: null }, store.get('jobble:stats', {}));
+  }
+  function recordStats() {
+    const s = getStats();
+    if (s.lastDay === game.day) return;
+    s.played++; s.lastDay = game.day;
+    if (game.status === 'won') {
+      s.won++; s.dist[game.guesses.length - 1]++;
+      s.streak = s.lastWinDay === game.day - 1 ? s.streak + 1 : 1;
+      s.maxStreak = Math.max(s.maxStreak, s.streak);
+      s.lastWinDay = game.day;
+    } else {
+      s.streak = 0;
+    }
+    store.set('jobble:stats', s);
+  }
+  function renderStats() {
+    const s = getStats();
+    if (s.lastWinDay !== null && s.lastWinDay < dayNumber() - 1) s.streak = 0;
+    const winPct = s.played ? Math.round((s.won / s.played) * 100) : 0;
+    $('#statgrid').innerHTML = [[s.played, 'Played'], [winPct, 'Win %'], [s.streak, 'Streak'], [s.maxStreak, 'Best streak']]
+      .map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+    const max = Math.max(1, ...s.dist);
+    const today = game && game.mode === 'daily' && game.status === 'won' ? game.guesses.length - 1 : -1;
+    $('#dist').innerHTML = s.dist.map((n, i) =>
+      `<div class="dist-row"><span>${i + 1}</span><span><span class="bar ${i === today ? 'today' : ''}" style="display:inline-block;width:${Math.max(6, (n / max) * 100)}%">${n}</span></span></div>`).join('');
+    document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.unit === unit)));
+  }
+
+  /* ================= Guess input ================= */
+  let guessable = [];
+  let matches = [], active = -1;
+
+  function buildSearchIndex() {
+    guessable = countries.map((c) => ({
+      ...c,
+      keys: [norm(c.name), norm(c.wbName), ...(ALIASES[c.iso3] || []).map(norm)].filter((k, i, a) => k && a.indexOf(k) === i)
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function search(q) {
+    const nq = norm(q);
+    if (!nq) return [];
+    const taken = new Set(game ? game.guesses : []);
+    const scored = [];
+    for (const c of guessable) {
+      if (taken.has(c.iso3)) continue;
+      let best = 99;
+      c.keys.forEach((k, i) => {
+        const primary = i === 0;
+        if (k === nq) best = Math.min(best, 0);
+        else if (k.startsWith(nq)) best = Math.min(best, primary ? 1 : 3);
+        else if (k.includes(' ' + nq)) best = Math.min(best, primary ? 2 : 4);
+      });
+      if (best < 99) scored.push([best, c]);
+    }
+    scored.sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name));
+    return scored.slice(0, 8).map((x) => x[1]);
+  }
+
+  function openList() {
+    els.list.innerHTML = matches.map((c, i) =>
+      `<li role="option" id="opt-${c.iso3}" data-iso="${c.iso3}" aria-selected="${i === active}">${escapeHtml(c.name)}${
+        c.name !== c.wbName ? `<small>${escapeHtml(c.wbName)}</small>` : ''}</li>`).join('');
+    const show = matches.length > 0;
+    els.list.hidden = !show;
+    els.input.setAttribute('aria-expanded', String(show));
+    if (active >= 0 && matches[active]) {
+      els.input.setAttribute('aria-activedescendant', 'opt-' + matches[active].iso3);
+      const li = els.list.children[active];
+      if (li) li.scrollIntoView({ block: 'nearest' });
+    } else {
+      els.input.removeAttribute('aria-activedescendant');
+    }
+  }
+  function closeList() {
+    els.list.hidden = true;
+    els.input.setAttribute('aria-expanded', 'false');
+    els.input.removeAttribute('aria-activedescendant');
+    active = -1;
+  }
+
+  els.input.addEventListener('input', () => {
+    matches = search(els.input.value);
+    active = matches.length ? 0 : -1;
+    openList();
+  });
+  els.input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!matches.length) return;
+      e.preventDefault();
+      if (els.list.hidden) { active = 0; openList(); return; }
+      active = (active + (e.key === 'ArrowDown' ? 1 : -1) + matches.length) % matches.length;
+      openList();
+    } else if (e.key === 'Escape') {
+      closeList();
+    }
+  });
+  els.input.addEventListener('blur', () => setTimeout(closeList, 120));
+  els.list.addEventListener('mousedown', (e) => e.preventDefault());
+  els.list.addEventListener('click', (e) => {
+    const li = e.target.closest('li[data-iso]');
+    if (li) submitGuess(li.dataset.iso);
+  });
+  els.form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!game || game.status !== 'playing') return;
+    const nq = norm(els.input.value);
+    let iso = null;
+    if (!els.list.hidden && active >= 0 && matches[active]) iso = matches[active].iso3;
+    if (!iso && nq) {
+      const exact = guessable.find((c) => c.keys.includes(nq));
+      if (exact) iso = exact.iso3;
+      else { const m = search(els.input.value); if (m.length === 1) iso = m[0].iso3; }
+    }
+    if (!iso) {
+      els.form.classList.remove('shake'); void els.form.offsetWidth; els.form.classList.add('shake');
+      toast(nq ? 'Pick a country from the list' : 'Type a country name first');
+      return;
+    }
+    submitGuess(iso);
+  });
+
+  function submitGuess(iso) {
+    if (!game || game.status !== 'playing') return;
+    if (game.guesses.includes(iso)) { toast('You already guessed that one'); return; }
+    game.guesses.push(iso);
+    if (iso === game.target) game.status = 'won';
+    else if (game.guesses.length >= MAX_GUESSES) game.status = 'lost';
+    saveGame();
+    els.input.value = '';
+    matches = []; closeList();
+    renderGuesses(game.guesses.length - 1);
+    renderClues(true);
+    if (game.status !== 'playing') {
+      if (game.mode === 'daily') recordStats();
+      setInputEnabled(false);
+      els.form.hidden = true;
+      renderResult(true);
+      els.result.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
+    } else {
+      els.input.focus();
+    }
+  }
+
+  /* ================= Misc UI ================= */
+  let toastTimer = null;
+  function toast(msg) {
+    els.toast.textContent = msg;
+    els.toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { els.toast.hidden = true; }, 2200);
+  }
+
+  els.shareBtn.addEventListener('click', async () => {
+    const text = shareText();
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Result copied');
+    } catch {
+      els.shareFallback.value = text;
+      els.shareFallback.hidden = false;
+      els.shareFallback.focus();
+      els.shareFallback.select();
+      toast('Copy the text below');
+    }
+  });
+  els.nextBtn.addEventListener('click', () => startGame('practice', { fresh: true }));
+  document.querySelectorAll('.modes button').forEach((b) =>
+    b.addEventListener('click', () => { if (b.dataset.mode !== mode || !game) startGame(b.dataset.mode); }));
+  $('#retryBtn').addEventListener('click', () => startGame(mode));
+
+  function setUnit(u) {
+    unit = u; store.set('jobble:unit', u);
+    if (game) renderGuesses();
+    renderStats();
+  }
+  els.unitToggle.addEventListener('click', () => setUnit(unit === 'km' ? 'mi' : 'km'));
+  document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => setUnit(b.dataset.unit)));
+
+  const helpDlg = $('#helpDlg'), statsDlg = $('#statsDlg');
+  $('#helpBtn').addEventListener('click', () => helpDlg.showModal());
+  $('#statsBtn').addEventListener('click', () => { renderStats(); statsDlg.showModal(); });
+  [helpDlg, statsDlg].forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+
+  if ('ResizeObserver' in window) {
+    let lastW = 0;
+    new ResizeObserver(() => {
+      const w = els.treemap.clientWidth;
+      if (w !== lastW) { lastW = w; if (profile && game) renderTreemap(); }
+    }).observe(els.treemap);
+  }
+
+  if (!store.get('jobble:seenHelp')) { store.set('jobble:seenHelp', true); setTimeout(() => helpDlg.showModal(), 400); }
+
+  startGame('daily');
+})();
+</script>
 </body>
 </html>
